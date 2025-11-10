@@ -92,7 +92,7 @@ class Pipsolar : public uart::UARTDevice, public PollingComponent {
   PIPSOLAR_BINARY_SENSOR(switch_on, QPIGS, int)
   PIPSOLAR_BINARY_SENSOR(dustproof_installed, QPIGS, int)
 
-  // QPIGS2 values
+  // QPIGS2 values (only for dual MPPT models)
 
   PIPSOLAR_SENSOR(pv2_input_current, QPIGS2, float)
   PIPSOLAR_SENSOR(pv2_input_voltage, QPIGS2, float)
@@ -212,6 +212,9 @@ class Pipsolar : public uart::UARTDevice, public PollingComponent {
   void loop() override;
   void dump_config() override;
   void update() override;
+  
+  // New method to set dual_mppt configuration
+  void set_dual_mppt(bool dual_mppt) { this->dual_mppt_ = dual_mppt; }
 
  protected:
   friend class PipsolarSelect;
@@ -219,6 +222,8 @@ class Pipsolar : public uart::UARTDevice, public PollingComponent {
   static const size_t COMMAND_QUEUE_LENGTH = 10;
   static const size_t COMMAND_TIMEOUT = 5000;
   uint32_t last_poll_ = 0;
+  bool dual_mppt_{false};  // Flag to enable/disable dual MPPT polling
+  
   void add_polling_command_(const char *command, ENUMPollingCommand polling_command);
   void empty_uart_buffer_();
   uint8_t check_incoming_crc_();
