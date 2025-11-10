@@ -9,6 +9,13 @@ static const char *const TAG = "pipsolar";
 void Pipsolar::setup() {
   this->state_ = STATE_IDLE;
   this->command_start_millis_ = 0;
+  
+  // Log dual MPPT configuration
+  if (this->dual_mppt_) {
+    ESP_LOGCONFIG(TAG, "  Dual MPPT: enabled");
+  } else {
+    ESP_LOGCONFIG(TAG, "  Dual MPPT: disabled (QPIGS2 polling will be skipped)");
+  }
 }
 
 void Pipsolar::empty_uart_buffer_() {
@@ -287,14 +294,17 @@ void Pipsolar::loop() {
         this->state_ = STATE_IDLE;
         break;
       case POLLING_QPIGS2:
-        if (this->pv2_input_current_) {
-          this->pv2_input_current_->publish_state(value_pv2_input_current_);
-        }
-        if (this->pv2_input_voltage_) {
-          this->pv2_input_voltage_->publish_state(value_pv2_input_voltage_);
-        }
-        if (this->pv2_charging_power_) {
-          this->pv2_charging_power_->publish_state(value_pv2_charging_power_);
+        // Only process QPIGS2 if dual_mppt is enabled
+        if (this->dual_mppt_) {
+          if (this->pv2_input_current_) {
+            this->pv2_input_current_->publish_state(value_pv2_input_current_);
+          }
+          if (this->pv2_input_voltage_) {
+            this->pv2_input_voltage_->publish_state(value_pv2_input_voltage_);
+          }
+          if (this->pv2_charging_power_) {
+            this->pv2_charging_power_->publish_state(value_pv2_charging_power_);
+          }
         }
         this->state_ = STATE_IDLE;
         break;
@@ -492,10 +502,6 @@ void Pipsolar::loop() {
         if (this->last_qpiri_) {
           this->last_qpiri_->publish_state(tmp);
         }
-        /*
-        this->current_max_ac_charging_current_select_ = value_current_max_ac_charging_current_;
-        this->current_max_charging_current_select_ = value_current_max_charging_current_;
-        */
         this->state_ = STATE_POLL_DECODED;
         break;
       case POLLING_QPIGS:
@@ -522,13 +528,18 @@ void Pipsolar::loop() {
         this->state_ = STATE_POLL_DECODED;
         break;
       case POLLING_QPIGS2:
-        ESP_LOGD(TAG, "Decode QPIGS2");
-        sscanf(                                                                                 // NOLINT
-            tmp,                                                                                // NOLINT
-            "(%f %f %d",                                                                        // NOLINT
-            &value_pv2_input_current_, &value_pv2_input_voltage_, &value_pv2_charging_power_);  // NOLINT
-        if (this->last_qpigs2_) {
-          this->last_qpigs2_->publish_state(tmp);
+        // Only decode QPIGS2 if dual_mppt is enabled
+        if (this->dual_mppt_) {
+          ESP_LOGD(TAG, "Decode QPIGS2");
+          sscanf(                                                                                 // NOLINT
+              tmp,                                                                                // NOLINT
+              "(%f %f %d",                                                                        // NOLINT
+              &value_pv2_input_current_, &value_pv2_input_voltage_, &value_pv2_charging_power_);  // NOLINT
+          if (this->last_qpigs2_) {
+            this->last_qpigs2_->publish_state(tmp);
+          }
+        } else {
+          ESP_LOGD(TAG, "Skipping QPIGS2 decode - dual_mppt is disabled");
         }
         this->state_ = STATE_POLL_DECODED;
         break;
@@ -944,18 +955,32 @@ void Pipsolar::switch_command(const std::string &command) {
   ESP_LOGD(TAG, "got command: %s", command.c_str());
   queue_command_(command.c_str(), command.length());
 }
+
 void Pipsolar::dump_config() {
   ESP_LOGCONFIG(TAG, "Pipsolar:");
+  ESP_LOGCONFIG(TAG, "  Dual MPPT: %s", this->dual_mppt_ ? "enabled" : "disabled");
   ESP_LOGCONFIG(TAG, "used commands:");
   for (auto &used_polling_command : this->used_polling_commands_) {
     if (used_polling_command.length != 0) {
-      ESP_LOGCONFIG(TAG, "%s", used_polling_command.command);
+      // Skip QPIGS2 in log if dual_mppt is disabled
+      if (used_polling_command.identifier == POLLING_QPIGS2 && !this->dual_mppt_) {
+        ESP_LOGCONFIG(TAG, "%s (skipped - dual_mppt disabled)", used_polling_command.command);
+      } else {
+        ESP_LOGCONFIG(TAG, "%s", used_polling_command.command);
+      }
     }
   }
 }
+
 void Pipsolar::update() {}
 
 void Pipsolar::add_polling_command_(const char *command, ENUMPollingCommand polling_command) {
+  // Skip adding QPIGS2 command if dual_mppt is disabled
+  if (polling_command == POLLING_QPIGS2 && !this->dual_mppt_) {
+    ESP_LOGCONFIG(TAG, "Skipping QPIGS2 polling command - dual_mppt is disabled");
+    return;
+  }
+  
   for (auto &used_polling_command : this->used_polling_commands_) {
     if (used_polling_command.length == strlen(command)) {
       uint8_t len = strlen(command);
