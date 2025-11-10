@@ -50,7 +50,6 @@ CONF_PV_OK_CONDITION_FOR_PARALLEL = "pv_ok_condition_for_parallel"
 CONF_PV_POWER_BALANCE = "pv_power_balance"
 
 # QPIGS sensors
-
 CONF_GRID_VOLTAGE = "grid_voltage"
 CONF_GRID_FREQUENCY = "grid_frequency"
 CONF_AC_OUTPUT_VOLTAGE = "ac_output_voltage"
@@ -72,16 +71,7 @@ CONF_BATTERY_VOLTAGE_OFFSET_FOR_FANS_ON = "battery_voltage_offset_for_fans_on"
 CONF_EEPROM_VERSION = "eeprom_version"
 CONF_PV1_CHARGING_POWER = "pv1_charging_power"
 
-# QPIGS2 sensors (only for dual MPPT models - requires dual_mppt: true in main component config)
-# These sensors are only available when dual_mppt is enabled in the pipsolar component configuration
-# Example:
-#   pipsolar:
-#     id: inverter0
-#     uart_id: uart_bus
-#     dual_mppt: true  # Enable this for MAX series or other dual MPPT models
-#
-# For single MPPT models (MKS series), leave dual_mppt: false (default) or omit it
-
+# QPIGS2 sensors (only for dual MPPT models)
 CONF_PV2_INPUT_CURRENT = "pv2_input_current"
 CONF_PV2_INPUT_VOLTAGE = "pv2_input_voltage"
 CONF_PV2_CHARGING_POWER = "pv2_charging_power"
@@ -282,7 +272,6 @@ TYPES = {
         accuracy_decimals=1,
         device_class=DEVICE_CLASS_POWER,
     ),
-    # Dual MPPT sensors (PV2) - only active when dual_mppt: true
     CONF_PV2_INPUT_CURRENT: sensor.sensor_schema(
         unit_of_measurement=UNIT_AMPERE,
         accuracy_decimals=1,
