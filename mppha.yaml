@@ -18,7 +18,7 @@ substitutions:
   ap_pass: "setup1234"
   project_name: "mchiriciuc.mppha"
   project_version: "1.2.6"
-  import_url: "github://mchiriciuc/pipsolaru/mppha.yaml
+  import_url: "github://mchiriciuc/pipsolaru/mppha.yaml@main
 
 
 # ============================================================================
